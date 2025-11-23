@@ -34,7 +34,7 @@
       roomId = document.getElementById('roomId').value.trim();
       if (!roomId) return alert("Please enter a Room ID");
 
-      ws = new WebSocket('ws://angsnyc-1.onrender.com');
+      ws = new WebSocket('ws://localhost:8080');
 
       ws.onopen = () => {
         console.log('✅ WebSocket connected');
@@ -87,8 +87,11 @@
 
     function changeVideo() {
       const url = document.getElementById('videoUrl').value.trim();
-      if (!url || !url.includes("youtube.com/watch?v=")) {
-        return alert("Invalid YouTube URL");
+      if (!url || (!url.includes("youtube.com/watch?v=") && !url.includes("youtu.be/"))) {
+        return alert("Invalid YouTube URL. Please use a valid YouTube link.");
+      }
+      if (!ws || ws.readyState !== WebSocket.OPEN) {
+        return alert("Please join a room first!");
       }
       ws.send(JSON.stringify({ roomId, action: 'changeUrl', url }));
     }
@@ -98,27 +101,68 @@
       if (!videoId) return alert("Invalid YouTube URL");
 
       if (player) {
-        player.loadVideoById(videoId);
+        player.loadVideoById({
+          'videoId': videoId,
+          'suggestedQuality': 'default'
+        });
       } else {
         player = new YT.Player('player', {
           height: '100%',
           width: '100%',
           videoId: videoId,
+          playerVars: {
+            'autoplay': 1,
+            'controls': 1,
+            'rel': 0,
+            'modestbranding': 1,
+            'fs': 1,
+            'enablejsapi': 1,
+            'origin': window.location.origin
+          },
           events: {
             'onReady': onPlayerReady,
-            'onStateChange': onPlayerStateChange
+            'onStateChange': onPlayerStateChange,
+            'onError': onPlayerError
           }
         });
       }
     }
 
     function extractVideoId(url) {
-      const match = url.match(/[?&]v=([^&]+)/);
-      return match ? match[1] : null;
+      let videoId = null;
+      
+      // Handle youtube.com/watch?v=VIDEO_ID
+      let match = url.match(/[?&]v=([^&]+)/);
+      if (match) {
+        videoId = match[1];
+      } else {
+        // Handle youtu.be/VIDEO_ID
+        match = url.match(/youtu\.be\/([^?&]+)/);
+        if (match) {
+          videoId = match[1];
+        }
+      }
+      
+      return videoId;
     }
 
     function onPlayerReady(event) {
+      console.log('Player ready');
       event.target.playVideo();
+    }
+
+    function onPlayerError(event) {
+      const errorMessages = {
+        2: 'Invalid video ID. Please check the URL.',
+        5: 'HTML5 player error. Try a different video.',
+        100: 'Video not found or has been removed.',
+        101: 'Video owner does not allow embedding. Try a different video.',
+        150: 'Video owner does not allow embedding. Try a different video.'
+      };
+      
+      const message = errorMessages[event.data] || 'An error occurred while loading the video.';
+      alert(message);
+      console.error('YouTube Player Error:', event.data, message);
     }
 
     function onPlayerStateChange(event) {
