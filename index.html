@@ -34,7 +34,7 @@
       roomId = document.getElementById('roomId').value.trim();
       if (!roomId) return alert("Please enter a Room ID");
 
-      ws = new WebSocket('wss://angsnyc-1.onrender.com');
+      ws = new WebSocket('wss://angsnyc-2.onrender.com');
 
       ws.onopen = () => {
         console.log('✅ WebSocket connected');
