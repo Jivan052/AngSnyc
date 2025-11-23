@@ -34,7 +34,7 @@
       roomId = document.getElementById('roomId').value.trim();
       if (!roomId) return alert("Please enter a Room ID");
 
-      ws = new WebSocket('wss://angsny.onrender.com');
+      ws = new WebSocket('ws://localhost:8080');
 
       ws.onopen = () => {
         console.log('✅ WebSocket connected');
@@ -49,11 +49,13 @@
           case 'sync':
           case 'changeUrl':
             loadVideo(data.url);
-            setTimeout(() => {
-              isSeeking = true;
-              player.seekTo(data.time, true);
-              setTimeout(() => isSeeking = false, 500);
-            }, 1000);
+            if (data.time > 0) {
+              setTimeout(() => {
+                isSeeking = true;
+                player.seekTo(data.time, true);
+                setTimeout(() => isSeeking = false, 300);
+              }, 300);
+            }
             break;
           case 'play':
             if (!isPlaying) {
@@ -70,10 +72,10 @@
             }
             break;
           case 'seek':
-            if (!isSeeking && Math.abs(player.getCurrentTime() - data.time) > 1) {
+            if (!isSeeking && Math.abs(player.getCurrentTime() - data.time) > 0.5) {
               isSeeking = true;
               player.seekTo(data.time, true);
-              setTimeout(() => isSeeking = false, 500);
+              setTimeout(() => isSeeking = false, 200);
             }
             break;
         }
@@ -140,13 +142,12 @@
     setInterval(() => {
       if (player && ws && ws.readyState === WebSocket.OPEN && player.getPlayerState() === YT.PlayerState.PLAYING) {
         const currentTime = player.getCurrentTime();
-        if (!isSeeking && Math.abs(currentTime - lastSeekTime) > 1) {
+        if (!isSeeking && Math.abs(currentTime - lastSeekTime) > 0.5) {
           lastSeekTime = currentTime;
-          console.log("⏩ Seeking to:", currentTime);
           ws.send(JSON.stringify({ roomId, action: 'seek', time: currentTime }));
         }
       }
-    }, 2000);
+    }, 1000);
   </script>
   <script src="https://www.youtube.com/iframe_api"></script>
    
