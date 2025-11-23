@@ -40,7 +40,7 @@ wss.on('connection', (ws) => {
       case 'pause':
       case 'seek':
         const now = Date.now();
-        if (now - room.lastUpdate < 1000) return; // Debounce updates (1 sec gap)
+        if (now - room.lastUpdate < 300) return; // Debounce updates (300ms gap)
         
         room.lastUpdate = now;
         room.currentTime = time;
