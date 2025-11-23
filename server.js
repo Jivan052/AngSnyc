@@ -17,8 +17,9 @@ wss.on('connection', (ws) => {
   console.log('New WebSocket connection');
 
   ws.on('message', (message) => {
-    console.log('Message received on server:', message);
-    const data = JSON.parse(message);
+    const messageStr = message.toString();
+    console.log('Message received on server:', messageStr);
+    const data = JSON.parse(messageStr);
     const { roomId, url, action, time } = data;
 
     if (!rooms[roomId]) {
