@@ -486,7 +486,7 @@
       statusDiv.textContent = 'Connecting';
       statusDiv.className = 'status-badge status-connecting';
 
-      ws = new WebSocket('ws://angsnyc-3.onrender.com/');
+      ws = new WebSocket('wss://angsnyc-3.onrender.com/');
 
       ws.onopen = () => {
         console.log('✅ WebSocket connected');
