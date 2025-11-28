@@ -451,6 +451,105 @@
     .edit-banner.show {
       display: flex;
     }
+    
+    /* Voice recording */
+    .voice-btn {
+      background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
+      color: #fff;
+      font-size: 18px;
+      border: 1px solid #404040;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+    
+    .voice-btn:hover {
+      background: linear-gradient(135deg, #333 0%, #222 100%);
+      border-color: #555;
+      transform: translateY(-1px);
+    }
+    
+    .voice-btn.recording {
+      background: linear-gradient(135deg, #8b0000 0%, #660000 100%);
+      border-color: #ff0000;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(255, 0, 0, 0.7); }
+      50% { box-shadow: 0 0 0 10px rgba(255, 0, 0, 0); }
+    }
+    
+    .recording-timer {
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(139, 0, 0, 0.95);
+      color: #fff;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      display: none;
+      white-space: nowrap;
+    }
+    
+    .recording-timer.show {
+      display: block;
+    }
+    
+    .voice-message {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 200px;
+    }
+    
+    .voice-play-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.1);
+      border: 2px solid rgba(255,255,255,0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      flex-shrink: 0;
+    }
+    
+    .voice-play-btn:hover {
+      background: rgba(255,255,255,0.2);
+      border-color: rgba(255,255,255,0.5);
+    }
+    
+    .voice-play-btn.playing {
+      background: rgba(255,255,255,0.2);
+    }
+    
+    .voice-waveform {
+      flex: 1;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      gap: 2px;
+    }
+    
+    .voice-bar {
+      width: 3px;
+      background: rgba(255,255,255,0.3);
+      border-radius: 2px;
+      transition: all 0.2s;
+    }
+    
+    .voice-duration {
+      font-size: 11px;
+      color: #999;
+      font-weight: 500;
+      flex-shrink: 0;
+    }
   </style>
 </head>
 <body>
@@ -545,6 +644,12 @@
               class="w-full px-4 py-3 rounded-lg cinema-input text-sm" 
               onkeypress="if(event.key==='Enter') sendMessage()">
           </div>
+          <div class="relative">
+            <div id="recordingTimer" class="recording-timer">0:00</div>
+            <button id="voiceBtn" onclick="toggleVoiceRecording()" class="px-4 py-3 cinema-btn-secondary rounded-lg voice-btn" title="Record voice note">
+              🎤
+            </button>
+          </div>
           <button onclick="toggleEmojiPicker()" class="px-4 py-3 cinema-btn-secondary rounded-lg text-base" title="Add emoji">
             😀
           </button>
@@ -569,6 +674,11 @@
     let replyToMessage = null;
     let editingMessage = null;
     const messageMap = new Map();
+    let mediaRecorder = null;
+    let audioChunks = [];
+    let recordingStartTime = null;
+    let recordingInterval = null;
+    let audioPlayers = new Map();
 
     // YouTube Search
     async function searchVideos() {
@@ -754,6 +864,9 @@
           case 'editChat':
             displayChatMessage(data.username, data.message, data.username === username, data.replyTo, data.messageId, true);
             break;
+          case 'voiceNote':
+            displayVoiceMessage(data.username, data.audioData, data.duration, data.username === username, data.messageId, data.replyTo);
+            break;
         }
       };
 
@@ -887,7 +1000,17 @@
     }
     
     function setReplyTo(sender, message) {
-      replyToMessage = { username: sender, message: message };
+      replyToMessage = { username: sender, message: message, type: 'text' };
+      document.getElementById('replyToUser').textContent = sender;
+      document.getElementById('replyBanner').classList.add('show');
+      document.getElementById('chatInput').focus();
+    }
+    
+    function setReplyToVoice(sender, duration, messageId) {
+      const minutes = Math.floor(duration / 60);
+      const seconds = duration % 60;
+      const durationText = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+      replyToMessage = { username: sender, message: `🎤 Voice message (${durationText})`, type: 'voice', messageId };
       document.getElementById('replyToUser').textContent = sender;
       document.getElementById('replyBanner').classList.add('show');
       document.getElementById('chatInput').focus();
@@ -913,6 +1036,186 @@
       editingMessage = null;
       document.getElementById('editBanner').classList.remove('show');
       document.getElementById('chatInput').value = '';
+    }
+    
+    // Voice Recording
+    async function toggleVoiceRecording() {
+      const voiceBtn = document.getElementById('voiceBtn');
+      const timerDiv = document.getElementById('recordingTimer');
+      
+      if (mediaRecorder && mediaRecorder.state === 'recording') {
+        // Stop recording
+        mediaRecorder.stop();
+        voiceBtn.classList.remove('recording');
+        timerDiv.classList.remove('show');
+        clearInterval(recordingInterval);
+      } else {
+        // Start recording
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          audioChunks = [];
+          mediaRecorder = new MediaRecorder(stream);
+          
+          mediaRecorder.ondataavailable = (event) => {
+            audioChunks.push(event.data);
+          };
+          
+          mediaRecorder.onstop = async () => {
+            const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+            const reader = new FileReader();
+            
+            reader.onloadend = () => {
+              const base64Audio = reader.result.split(',')[1];
+              const duration = Math.floor((Date.now() - recordingStartTime) / 1000);
+              
+              if (!ws || ws.readyState !== WebSocket.OPEN || !roomId) {
+                alert('Please join a room first!');
+                return;
+              }
+              
+              const messageId = Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+              const voiceData = {
+                roomId,
+                action: 'voiceNote',
+                username,
+                audioData: base64Audio,
+                duration,
+                messageId
+              };
+              
+              if (replyToMessage) {
+                voiceData.replyTo = {
+                  username: replyToMessage.username,
+                  message: replyToMessage.message
+                };
+              }
+              
+              ws.send(JSON.stringify(voiceData));
+              cancelReply();
+            };
+            
+            reader.readAsDataURL(audioBlob);
+            stream.getTracks().forEach(track => track.stop());
+          };
+          
+          recordingStartTime = Date.now();
+          mediaRecorder.start();
+          voiceBtn.classList.add('recording');
+          timerDiv.classList.add('show');
+          
+          // Update timer
+          recordingInterval = setInterval(() => {
+            const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
+            const minutes = Math.floor(elapsed / 60);
+            const seconds = elapsed % 60;
+            timerDiv.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+          }, 100);
+          
+        } catch (error) {
+          console.error('Error accessing microphone:', error);
+          alert('Could not access microphone. Please grant permission.');
+        }
+      }
+    }
+    
+    function playVoiceNote(messageId, audioData) {
+      const playBtn = document.querySelector(`[data-voice-id="${messageId}"] .voice-play-btn`);
+      const bars = document.querySelectorAll(`[data-voice-id="${messageId}"] .voice-bar`);
+      
+      if (audioPlayers.has(messageId)) {
+        const audio = audioPlayers.get(messageId);
+        if (!audio.paused) {
+          audio.pause();
+          audio.currentTime = 0;
+          playBtn.classList.remove('playing');
+          playBtn.innerHTML = '▶';
+          bars.forEach(bar => bar.style.background = 'rgba(255,255,255,0.3)');
+          audioPlayers.delete(messageId);
+          return;
+        }
+      }
+      
+      const audio = new Audio('data:audio/webm;base64,' + audioData);
+      audioPlayers.set(messageId, audio);
+      
+      playBtn.classList.add('playing');
+      playBtn.innerHTML = '⏸';
+      
+      // Animate bars
+      let barIndex = 0;
+      const animateInterval = setInterval(() => {
+        bars.forEach((bar, i) => {
+          if (i === barIndex % bars.length) {
+            bar.style.background = 'rgba(255,255,255,0.8)';
+            bar.style.height = Math.random() * 24 + 8 + 'px';
+          } else {
+            bar.style.background = 'rgba(255,255,255,0.3)';
+          }
+        });
+        barIndex++;
+      }, 100);
+      
+      audio.onended = () => {
+        clearInterval(animateInterval);
+        playBtn.classList.remove('playing');
+        playBtn.innerHTML = '▶';
+        bars.forEach(bar => {
+          bar.style.background = 'rgba(255,255,255,0.3)';
+          bar.style.height = '16px';
+        });
+        audioPlayers.delete(messageId);
+      };
+      
+      audio.play();
+    }
+    
+    function displayVoiceMessage(sender, audioData, duration, isMe, messageId, replyTo) {
+      const chatDiv = document.getElementById('chatMessages');
+      const msgDiv = document.createElement('div');
+      msgDiv.className = 'chat-message';
+      msgDiv.style.position = 'relative';
+      
+      const bubbleClass = isMe ? 'my-message' : 'other-message';
+      
+      // Generate waveform bars
+      const barCount = 20;
+      let barsHtml = '';
+      for (let i = 0; i < barCount; i++) {
+        const height = Math.random() * 16 + 8;
+        barsHtml += `<div class="voice-bar" style="height: ${height}px"></div>`;
+      }
+      
+      const minutes = Math.floor(duration / 60);
+      const seconds = duration % 60;
+      const durationText = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+      
+      let replyHtml = '';
+      if (replyTo) {
+        replyHtml = `
+          <div class="reply-indicator">
+            <div class="font-semibold">${escapeHtml(replyTo.username)}</div>
+            <div class="truncate">${escapeHtml(replyTo.message.substring(0, 50))}${replyTo.message.length > 50 ? '...' : ''}</div>
+          </div>
+        `;
+      }
+      
+      const replyBtnHtml = `<button class="reply-btn" onclick='setReplyToVoice("${sender.replace(/"/g, '&quot;')}", ${duration}, "${messageId}")'>Reply</button>`;
+      
+      msgDiv.innerHTML = `
+        <div class="${bubbleClass} rounded-2xl px-5 py-3 ${isMe ? 'ml-auto' : 'mr-auto'}" style="position: relative; max-width: 320px;">
+          ${replyBtnHtml}
+          <div class="text-xs font-semibold mb-3 ${isMe ? 'text-gray-300' : 'text-gray-500'} tracking-wide uppercase">${sender}</div>
+          ${replyHtml}
+          <div class="voice-message" data-voice-id="${messageId}">
+            <div class="voice-play-btn" onclick='playVoiceNote("${messageId}", "${audioData}")'>▶</div>
+            <div class="voice-waveform">${barsHtml}</div>
+            <div class="voice-duration">${durationText}</div>
+          </div>
+        </div>
+      `;
+      
+      chatDiv.appendChild(msgDiv);
+      chatDiv.scrollTop = chatDiv.scrollHeight;
     }
 
     function displayChatMessage(sender, message, isMe, replyTo, messageId, isEdited) {
