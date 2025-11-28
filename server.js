@@ -81,7 +81,7 @@ wss.on('connection', (ws) => {
       const messageStr = message.toString();
       console.log('Message received on server:', messageStr);
       const data = JSON.parse(messageStr);
-      const { roomId, url, action, time, username, message: chatMessage, messageId, newMessage } = data;
+      const { roomId, url, action, time, username, message: chatMessage, messageId, newMessage, audioData, duration } = data;
 
       if (!roomId) {
         console.error('❌ No roomId provided in message');
@@ -185,6 +185,25 @@ wss.on('connection', (ws) => {
               message: newMessage,
               messageId 
             }));
+          }
+        });
+        break;
+      
+      case 'voiceNote':
+        console.log(`🎤 Voice note in room ${roomId} from ${username} - Duration: ${duration}s`);
+        const voiceData = {
+          type: 'voiceNote',
+          username,
+          audioData,
+          duration,
+          messageId
+        };
+        if (data.replyTo) {
+          voiceData.replyTo = data.replyTo;
+        }
+        room.users.forEach((user) => {
+          if (user.readyState === WebSocket.OPEN) {
+            user.send(JSON.stringify(voiceData));
           }
         });
         break;
