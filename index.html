@@ -288,6 +288,169 @@
     .resize-handle-right {
       right: 0;
     }
+    
+    /* Emoji picker */
+    .emoji-picker {
+      position: absolute;
+      bottom: 100%;
+      left: 0;
+      background: linear-gradient(135deg, #1a1a1a 0%, #0f0f0f 100%);
+      border: 1px solid #2a2a2a;
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 8px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+      display: none;
+      z-index: 100;
+      max-width: 280px;
+    }
+    
+    .emoji-picker.show {
+      display: block;
+      animation: emojiSlideUp 0.2s ease-out;
+    }
+    
+    @keyframes emojiSlideUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .emoji-grid {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 4px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    
+    .emoji-btn {
+      background: transparent;
+      border: none;
+      font-size: 20px;
+      cursor: pointer;
+      padding: 6px;
+      border-radius: 6px;
+      transition: all 0.2s;
+    }
+    
+    .emoji-btn:hover {
+      background: rgba(255,255,255,0.1);
+      transform: scale(1.2);
+    }
+    
+    /* Reply feature */
+    .reply-banner {
+      background: linear-gradient(135deg, #1a1a1a 0%, #0f0f0f 100%);
+      border: 1px solid #2a2a2a;
+      border-radius: 8px;
+      padding: 8px 12px;
+      margin-bottom: 8px;
+      display: none;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .reply-banner.show {
+      display: flex;
+    }
+    
+    .reply-close {
+      background: transparent;
+      border: none;
+      color: #666;
+      cursor: pointer;
+      font-size: 16px;
+      padding: 0;
+      margin-left: auto;
+      transition: color 0.2s;
+    }
+    
+    .reply-close:hover {
+      color: #fff;
+    }
+    
+    .reply-indicator {
+      border-left: 3px solid #666;
+      padding-left: 8px;
+      margin-bottom: 8px;
+      font-size: 11px;
+      color: #999;
+      font-style: italic;
+    }
+    
+    .chat-message:hover .reply-btn {
+      opacity: 1;
+    }
+    
+    .reply-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: rgba(255,255,255,0.1);
+      border: none;
+      color: #fff;
+      cursor: pointer;
+      font-size: 10px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      opacity: 0;
+      transition: all 0.2s;
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+    
+    .reply-btn:hover {
+      background: rgba(255,255,255,0.2);
+    }
+    
+    .edit-btn {
+      position: absolute;
+      top: 8px;
+      right: 60px;
+      background: rgba(255,255,255,0.1);
+      border: none;
+      color: #fff;
+      cursor: pointer;
+      font-size: 10px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      opacity: 0;
+      transition: all 0.2s;
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+    
+    .edit-btn:hover {
+      background: rgba(255,255,255,0.2);
+    }
+    
+    .chat-message:hover .edit-btn {
+      opacity: 1;
+    }
+    
+    .edited-indicator {
+      font-size: 10px;
+      color: #666;
+      font-style: italic;
+      margin-top: 4px;
+    }
+    
+    .edit-banner {
+      background: linear-gradient(135deg, #1a1a1a 0%, #0f0f0f 100%);
+      border: 1px solid #2a2a2a;
+      border-radius: 8px;
+      padding: 8px 12px;
+      margin-bottom: 8px;
+      display: none;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .edit-banner.show {
+      display: flex;
+    }
   </style>
 </head>
 <body>
@@ -364,10 +527,27 @@
         </div>
       </div>
       <div class="p-4 border-t border-gray-900">
-        <div class="flex gap-2">
-          <input id="chatInput" type="text" placeholder="Message..." 
-            class="flex-1 px-4 py-3 rounded-lg cinema-input text-sm" 
-            onkeypress="if(event.key==='Enter') sendMessage()">
+        <div id="editBanner" class="edit-banner">
+          <span class="text-xs text-gray-400">Editing message</span>
+          <button onclick="cancelEdit()" class="reply-close" title="Cancel edit">✕</button>
+        </div>
+        <div id="replyBanner" class="reply-banner">
+          <span class="text-xs text-gray-400">Replying to</span>
+          <span id="replyToUser" class="text-xs font-semibold text-white"></span>
+          <button onclick="cancelReply()" class="reply-close" title="Cancel reply">✕</button>
+        </div>
+        <div class="flex gap-2 relative">
+          <div class="relative flex-1">
+            <div id="emojiPicker" class="emoji-picker">
+              <div class="emoji-grid" id="emojiGrid"></div>
+            </div>
+            <input id="chatInput" type="text" placeholder="Message..." 
+              class="w-full px-4 py-3 rounded-lg cinema-input text-sm" 
+              onkeypress="if(event.key==='Enter') sendMessage()">
+          </div>
+          <button onclick="toggleEmojiPicker()" class="px-4 py-3 cinema-btn-secondary rounded-lg text-base" title="Add emoji">
+            😀
+          </button>
           <button onclick="sendMessage()" class="px-4 py-3 cinema-btn-secondary rounded-lg text-base">
             ➜
           </button>
@@ -386,6 +566,9 @@
     let isSeeking = false;
     let isPaused = false;
     let isPlaying = false;
+    let replyToMessage = null;
+    let editingMessage = null;
+    const messageMap = new Map();
 
     // YouTube Search
     async function searchVideos() {
@@ -486,7 +669,7 @@
       statusDiv.textContent = 'Connecting';
       statusDiv.className = 'status-badge status-connecting';
 
-      ws = new WebSocket('wss://angsnyc-3.onrender.com/');
+      ws = new WebSocket('wss://angsnyc-3.onrender.com');
 
       ws.onopen = () => {
         console.log('✅ WebSocket connected');
@@ -566,7 +749,10 @@
             }
             break;
           case 'chat':
-            displayChatMessage(data.username, data.message, data.username === username);
+            displayChatMessage(data.username, data.message, data.username === username, data.replyTo, data.messageId, false);
+            break;
+          case 'editChat':
+            displayChatMessage(data.username, data.message, data.username === username, data.replyTo, data.messageId, true);
             break;
         }
       };
@@ -664,31 +850,118 @@
         return;
       }
       
-      ws.send(JSON.stringify({ 
-        roomId, 
-        action: 'chat', 
-        username, 
-        message 
-      }));
+      if (editingMessage) {
+        // Send edit action
+        const editData = {
+          roomId,
+          action: 'editChat',
+          messageId: editingMessage.id,
+          newMessage: message
+        };
+        ws.send(JSON.stringify(editData));
+        input.value = '';
+        cancelEdit();
+      } else {
+        // Send new message
+        const messageId = Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        const messageData = { 
+          roomId, 
+          action: 'chat', 
+          username,
+          message,
+          messageId
+        };
+        
+        if (replyToMessage) {
+          messageData.replyTo = {
+            username: replyToMessage.username,
+            message: replyToMessage.message
+          };
+        }
+        
+        ws.send(JSON.stringify(messageData));
+        
+        input.value = '';
+        cancelReply();
+      }
+    }
+    
+    function setReplyTo(sender, message) {
+      replyToMessage = { username: sender, message: message };
+      document.getElementById('replyToUser').textContent = sender;
+      document.getElementById('replyBanner').classList.add('show');
+      document.getElementById('chatInput').focus();
+    }
+    
+    function cancelReply() {
+      replyToMessage = null;
+      document.getElementById('replyBanner').classList.remove('show');
+    }
+    
+    function editMessage(messageId, currentMessage) {
+      editingMessage = { id: messageId, message: currentMessage };
+      document.getElementById('editBanner').classList.add('show');
+      const input = document.getElementById('chatInput');
+      input.value = currentMessage;
+      input.focus();
       
-      input.value = '';
+      // Cancel reply if active
+      cancelReply();
+    }
+    
+    function cancelEdit() {
+      editingMessage = null;
+      document.getElementById('editBanner').classList.remove('show');
+      document.getElementById('chatInput').value = '';
     }
 
-    function displayChatMessage(sender, message, isMe) {
+    function displayChatMessage(sender, message, isMe, replyTo, messageId, isEdited) {
       const chatDiv = document.getElementById('chatMessages');
-      const msgDiv = document.createElement('div');
-      msgDiv.className = 'chat-message';
+      
+      // Check if message already exists (for edits)
+      let msgDiv = messageId ? messageMap.get(messageId) : null;
+      const isUpdate = !!msgDiv;
+      
+      if (!msgDiv) {
+        msgDiv = document.createElement('div');
+        msgDiv.className = 'chat-message';
+        msgDiv.style.position = 'relative';
+        if (messageId) {
+          msgDiv.setAttribute('data-message-id', messageId);
+          messageMap.set(messageId, msgDiv);
+        }
+      }
       
       const bubbleClass = isMe ? 'my-message' : 'other-message';
+      
+      let replyHtml = '';
+      if (replyTo) {
+        replyHtml = `
+          <div class="reply-indicator">
+            <div class="font-semibold">${escapeHtml(replyTo.username)}</div>
+            <div class="truncate">${escapeHtml(replyTo.message.substring(0, 50))}${replyTo.message.length > 50 ? '...' : ''}</div>
+          </div>
+        `;
+      }
+      
+      const editedHtml = isEdited ? '<div class="edited-indicator">edited</div>' : '';
+      const editBtnHtml = isMe && messageId ? `<button class="edit-btn" onclick='editMessage("${messageId}", "${message.replace(/"/g, '&quot;').replace(/'/g, "&apos;")}")'>Edit</button>` : '';
+      
       msgDiv.innerHTML = `
-        <div class="${bubbleClass} rounded-2xl px-5 py-3 max-w-xs ${isMe ? 'ml-auto' : 'mr-auto'}">
+        <div class="${bubbleClass} rounded-2xl px-5 py-3 max-w-xs ${isMe ? 'ml-auto' : 'mr-auto'}" style="position: relative;">
+          ${editBtnHtml}
+          <button class="reply-btn" onclick='setReplyTo("${sender.replace(/"/g, '&quot;')}", "${message.replace(/"/g, '&quot;').replace(/'/g, "&apos;")}")'>Reply</button>
           <div class="text-xs font-semibold mb-2 ${isMe ? 'text-gray-300' : 'text-gray-500'} tracking-wide uppercase">${sender}</div>
+          ${replyHtml}
           <div class="text-sm text-white leading-relaxed font-light">${escapeHtml(message)}</div>
+          ${editedHtml}
         </div>
       `;
       
-      chatDiv.appendChild(msgDiv);
-      chatDiv.scrollTop = chatDiv.scrollHeight;
+      if (!isUpdate) {
+        chatDiv.appendChild(msgDiv);
+        chatDiv.scrollTop = chatDiv.scrollHeight;
+      }
     }
 
     function escapeHtml(text) {
@@ -751,6 +1024,94 @@
     
     // Initialize resizable panels on load
     initResizablePanels();
+
+    // Emoji Picker
+    const emojis = [
+      '😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂',
+      '🙂', '🙃', '😉', '😊', '😇', '🥰', '😍', '🤩',
+      '😘', '😗', '😚', '😙', '😋', '😛', '😜', '🤪',
+      '😝', '🤑', '🤗', '🤭', '🤫', '🤔', '🤐', '🤨',
+      '😐', '😑', '😶', '😏', '😒', '🙄', '😬', '🤥',
+      '😌', '😔', '😪', '🤤', '😴', '😷', '🤒', '🤕',
+      '🤢', '🤮', '🤧', '🥵', '🥶', '😵', '🤯', '🤠',
+      '🥳', '😎', '🤓', '🧐', '😕', '😟', '🙁', '😮',
+      '😯', '😲', '😳', '🥺', '😦', '😧', '😨', '😰',
+      '😥', '😢', '😭', '😱', '😖', '😣', '😞', '😓',
+      '😩', '😫', '🥱', '😤', '😡', '😠', '🤬', '👍',
+      '👎', '👌', '✌️', '🤞', '🤟', '🤘', '🤙', '👈',
+      '👉', '👆', '👇', '☝️', '👋', '🤚', '🖐️', '✋',
+      '🖖', '👏', '🙌', '👐', '🤲', '🤝', '🙏', '✍️',
+      '💪', '🦾', '🦿', '🦵', '🦶', '👂', '🦻', '👃',
+      '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍',
+      '🤎', '💔', '❣️', '💕', '💞', '💓', '💗', '💖',
+      '💘', '💝', '💟', '☮️', '✝️', '☪️', '🕉️', '☸️',
+      '✡️', '🔯', '🕎', '☯️', '☦️', '🛐', '⛎', '♈',
+      '♉', '♊', '♋', '♌', '♍', '♎', '♏', '♐',
+      '♑', '♒', '♓', '🆔', '⚛️', '🉑', '☢️', '☣️',
+      '🔴', '🟠', '🟡', '🟢', '🔵', '🟣', '⚫', '⚪',
+      '🟤', '🔺', '🔻', '🔸', '🔹', '🔶', '🔷', '🔳',
+      '🔲', '▪️', '▫️', '◾', '◽', '◼️', '◻️', '🟥',
+      '🟧', '🟨', '🟩', '🟦', '🟪', '⬛', '⬜', '🟫',
+      '✅', '☑️', '✔️', '✖️', '❌', '❎', '➕', '➖',
+      '➗', '➰', '➿', '〽️', '✳️', '✴️', '❇️', '‼️',
+      '⁉️', '❓', '❔', '❕', '❗', '〰️', '©️', '®️',
+      '™️', '#️⃣', '*️⃣', '0️⃣', '1️⃣', '2️⃣', '3️⃣', '4️⃣',
+      '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟', '🔠', '🔡',
+      '🔢', '🔣', '🔤', '🅰️', '🆎', '🅱️', '🆑', '🆒',
+      '🆓', 'ℹ️', '🆔', 'Ⓜ️', '🆕', '🆖', '🅾️', '🆗',
+      '🅿️', '🆘', '🆙', '🆚', '🈁', '🈂️', '🈷️', '🈶',
+      '🈯', '🉐', '🈹', '🈚', '🈲', '🉑', '🈸', '🈴',
+      '🎬', '🎭', '🎨', '🎪', '🎤', '🎧', '🎼', '🎹',
+      '🥁', '🎷', '🎺', '🎸', '🪕', '🎻', '🎲', '♟️',
+      '🎯', '🎳', '🎮', '🎰', '🧩', '🚗', '🚕', '🚙',
+      '🚌', '🚎', '🏎️', '🚓', '🚑', '🚒', '🚐', '🚚',
+      '🚛', '🚜', '🦯', '🦽', '🦼', '🛴', '🚲', '🛵',
+      '🏍️', '🛺', '🚨', '🚔', '🚍', '🚘', '🚖', '🚡'
+    ];
+
+    function initEmojiPicker() {
+      const emojiGrid = document.getElementById('emojiGrid');
+      emojis.forEach(emoji => {
+        const btn = document.createElement('button');
+        btn.className = 'emoji-btn';
+        btn.textContent = emoji;
+        btn.onclick = () => insertEmoji(emoji);
+        emojiGrid.appendChild(btn);
+      });
+    }
+
+    function toggleEmojiPicker() {
+      const picker = document.getElementById('emojiPicker');
+      picker.classList.toggle('show');
+    }
+
+    function insertEmoji(emoji) {
+      const input = document.getElementById('chatInput');
+      const start = input.selectionStart;
+      const end = input.selectionEnd;
+      const text = input.value;
+      
+      input.value = text.substring(0, start) + emoji + text.substring(end);
+      input.focus();
+      
+      const newPos = start + emoji.length;
+      input.setSelectionRange(newPos, newPos);
+      
+      toggleEmojiPicker();
+    }
+
+    // Close emoji picker when clicking outside
+    document.addEventListener('click', (e) => {
+      const picker = document.getElementById('emojiPicker');
+      const emojiBtn = e.target.closest('button[onclick="toggleEmojiPicker()"]');
+      
+      if (!picker.contains(e.target) && !emojiBtn && picker.classList.contains('show')) {
+        picker.classList.remove('show');
+      }
+    });
+
+    // Initialize emoji picker
+    initEmojiPicker();
   </script>
 </body>
 </html>
