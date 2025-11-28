@@ -81,7 +81,7 @@ wss.on('connection', (ws) => {
       const messageStr = message.toString();
       console.log('Message received on server:', messageStr);
       const data = JSON.parse(messageStr);
-      const { roomId, url, action, time, username, message: chatMessage } = data;
+      const { roomId, url, action, time, username, message: chatMessage, messageId, newMessage } = data;
 
       if (!roomId) {
         console.error('❌ No roomId provided in message');
@@ -164,9 +164,27 @@ wss.on('connection', (ws) => {
 
       case 'chat':
         console.log(`💬 Chat in room ${roomId} from ${username}: ${chatMessage}`);
+        const chatData = { type: 'chat', username, message: chatMessage, messageId };
+        if (data.replyTo) {
+          chatData.replyTo = data.replyTo;
+        }
         room.users.forEach((user) => {
           if (user.readyState === WebSocket.OPEN) {
-            user.send(JSON.stringify({ type: 'chat', username, message: chatMessage }));
+            user.send(JSON.stringify(chatData));
+          }
+        });
+        break;
+      
+      case 'editChat':
+        console.log(`✏️ Edit in room ${roomId} - Message ID: ${messageId}`);
+        room.users.forEach((user) => {
+          if (user.readyState === WebSocket.OPEN) {
+            user.send(JSON.stringify({ 
+              type: 'editChat', 
+              username, 
+              message: newMessage,
+              messageId 
+            }));
           }
         });
         break;
