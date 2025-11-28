@@ -3,201 +3,754 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AngSync</title>
+  <title>AngSync Cinema</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    
+    * { 
+      scrollbar-width: thin; 
+      scrollbar-color: #333 #0a0a0a; 
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    *::-webkit-scrollbar { width: 6px; height: 6px; }
+    *::-webkit-scrollbar-track { background: #0a0a0a; }
+    *::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+    *::-webkit-scrollbar-thumb:hover { background: #444; }
+    
+    body { 
+      background: #000;
+      color: #fff;
+      overflow: hidden;
+    }
+    
+    /* Cinema lighting effects */
+    .cinema-glow {
+      box-shadow: 
+        0 0 40px rgba(255,255,255,0.03),
+        inset 0 1px 1px rgba(255,255,255,0.05);
+    }
+    
+    .spotlight {
+      background: linear-gradient(180deg, 
+        rgba(20,20,20,0.95) 0%, 
+        rgba(10,10,10,0.98) 50%,
+        rgba(0,0,0,1) 100%
+      );
+    }
+    
+    /* Video result cards */
+    .video-result { 
+      background: linear-gradient(135deg, #1a1a1a 0%, #0f0f0f 100%);
+      border: 1px solid #222;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .video-result::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.03), transparent);
+      transition: left 0.5s;
+    }
+    
+    .video-result:hover::before {
+      left: 100%;
+    }
+    
+    .video-result:hover { 
+      border-color: #fff;
+      transform: translateX(4px) scale(1.02);
+      box-shadow: 
+        0 0 30px rgba(255,255,255,0.1),
+        0 8px 32px rgba(0,0,0,0.6);
+    }
+    
+    .video-result.playing { 
+      border-color: #fff;
+      background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
+      box-shadow: 
+        0 0 40px rgba(255,255,255,0.15),
+        inset 0 0 20px rgba(255,255,255,0.05);
+    }
+    
+    .video-result.playing::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      background: #fff;
+      box-shadow: 0 0 10px #fff;
+    }
+    
+    /* Chat messages */
+    .chat-message { 
+      animation: messageSlide 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+      opacity: 0;
+      animation-fill-mode: forwards;
+    }
+    
+    @keyframes messageSlide { 
+      from { opacity: 0; transform: translateY(20px) scale(0.9); } 
+      to { opacity: 1; transform: translateY(0) scale(1); } 
+    }
+    
+    .my-message { 
+      background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
+      border: 1px solid #404040;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+    }
+    
+    .other-message { 
+      background: linear-gradient(135deg, #1a1a1a 0%, #0f0f0f 100%);
+      border: 1px solid #2a2a2a;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+    }
+    
+    /* Premium inputs */
+    .cinema-input {
+      background: linear-gradient(135deg, #1a1a1a 0%, #0f0f0f 100%);
+      border: 1px solid #2a2a2a;
+      color: #fff;
+      transition: all 0.3s ease;
+      font-size: 14px;
+      letter-spacing: 0.3px;
+    }
+    
+    .cinema-input:focus {
+      background: #1a1a1a;
+      border-color: #fff;
+      outline: none;
+      box-shadow: 
+        0 0 0 3px rgba(255,255,255,0.05),
+        0 0 20px rgba(255,255,255,0.1);
+    }
+    
+    .cinema-input::placeholder {
+      color: #666;
+      font-weight: 300;
+    }
+    
+    /* Premium buttons */
+    .cinema-btn {
+      background: linear-gradient(135deg, #fff 0%, #e8e8e8 100%);
+      color: #000;
+      font-weight: 600;
+      font-size: 11px;
+      letter-spacing: 1.2px;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      border: none;
+      text-transform: uppercase;
+      box-shadow: 
+        0 2px 8px rgba(255,255,255,0.15),
+        inset 0 1px 0 rgba(255,255,255,0.4);
+    }
+    
+    .cinema-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 
+        0 4px 16px rgba(255,255,255,0.25),
+        inset 0 1px 0 rgba(255,255,255,0.5);
+      background: linear-gradient(135deg, #fff 0%, #f5f5f5 100%);
+    }
+    
+    .cinema-btn:active {
+      transform: translateY(0);
+      box-shadow: 
+        0 1px 4px rgba(255,255,255,0.1),
+        inset 0 1px 0 rgba(255,255,255,0.3);
+    }
+    
+    .cinema-btn-secondary {
+      background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      border: 1px solid #404040;
+      text-transform: uppercase;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 
+        0 2px 8px rgba(0,0,0,0.3),
+        inset 0 1px 0 rgba(255,255,255,0.05);
+    }
+    
+    .cinema-btn-secondary:hover {
+      background: linear-gradient(135deg, #333 0%, #222 100%);
+      border-color: #555;
+      transform: translateY(-1px);
+      box-shadow: 
+        0 4px 12px rgba(0,0,0,0.4),
+        inset 0 1px 0 rgba(255,255,255,0.08);
+    }
+    
+    .cinema-btn-secondary:active {
+      transform: translateY(0);
+    }
+    
+    /* Status badges */
+    .status-badge {
+      background: linear-gradient(135deg, #1a1a1a 0%, #0f0f0f 100%);
+      border: 1px solid #2a2a2a;
+      padding: 8px 20px;
+      border-radius: 24px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+    
+    .status-connected {
+      background: linear-gradient(135deg, #1a3a1a 0%, #0f1f0f 100%);
+      border-color: #2a4a2a;
+      color: #7fff7f;
+      box-shadow: 0 0 20px rgba(127,255,127,0.1);
+    }
+    
+    .status-connecting {
+      background: linear-gradient(135deg, #3a3a1a 0%, #1f1f0f 100%);
+      border-color: #4a4a2a;
+      color: #ffff7f;
+      box-shadow: 0 0 20px rgba(255,255,127,0.1);
+    }
+    
+    .status-error {
+      background: linear-gradient(135deg, #3a1a1a 0%, #1f0f0f 100%);
+      border-color: #4a2a2a;
+      color: #ff7f7f;
+      box-shadow: 0 0 20px rgba(255,127,127,0.1);
+    }
+    
+    /* Theater screen effect */
+    #player {
+      box-shadow: 
+        0 0 100px rgba(255,255,255,0.05),
+        0 20px 80px rgba(0,0,0,0.8);
+    }
+    
+    .screen-frame {
+      background: linear-gradient(180deg, #0a0a0a 0%, #000 50%, #0a0a0a 100%);
+      box-shadow: inset 0 0 100px rgba(0,0,0,0.8);
+    }
+    
+    /* Premium dividers */
+    .divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, #2a2a2a, transparent);
+    }
+    
+    /* Smooth animations */
+    .fade-in {
+      animation: fadeIn 0.6s ease-out;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    /* Resizable panels */
+    .resizable {
+      position: relative;
+    }
+    
+    .resize-handle {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 4px;
+      cursor: ew-resize;
+      background: transparent;
+      transition: background 0.2s;
+      z-index: 10;
+    }
+    
+    .resize-handle:hover {
+      background: rgba(255,255,255,0.1);
+    }
+    
+    .resize-handle:active {
+      background: rgba(255,255,255,0.2);
+    }
+    
+    .resize-handle-left {
+      left: 0;
+    }
+    
+    .resize-handle-right {
+      right: 0;
+    }
+  </style>
 </head>
-<body class="bg-gradient-to-br from-gray-900 via-purple-900 to-black text-white min-h-screen">
-  <div class="container mx-auto p-4 pb-20"> <!-- Added pb-20 for padding-bottom -->
-    <h1 class="text-4xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500 hover:from-purple-500 hover:to-blue-400 transition-all duration-500">AngSync Room</h1>
-    <p class="text-xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-white-500 hover:from-green-500 hover:to-blue-400 transition-all duration-500">Let's make some synced rooms for songs & videos!</p>
-    <div class="mb-4">
-      <input id="roomId" type="text" placeholder="Enter Room ID" class="p-2 rounded bg-gray-800 border border-gray-700 focus:border-blue-500 focus:outline-none transition-all duration-300 hover:bg-gray-700">
-      <button onclick="joinRoom()" class="p-2 bg-gradient-to-r from-blue-500 to-blue-600 rounded hover:from-blue-600 hover:to-blue-700 transform hover:scale-105 transition-all duration-300">Join Room</button>
+<body>
+  <div class="flex h-screen">
+    <!-- Left Sidebar: Video Search -->
+    <div id="leftPanel" class="w-80 spotlight border-r border-gray-900 flex flex-col resizable" style="min-width: 250px; max-width: 500px;">
+      <div class="resize-handle resize-handle-right"></div>
+      <div class="p-6 border-b border-gray-900">
+        <h2 class="text-xs font-bold text-gray-400 tracking-widest mb-4 uppercase">Video Library</h2>
+        <input id="searchInput" type="text" placeholder="Search videos..." 
+          class="w-full px-4 py-3 rounded-lg cinema-input mb-3">
+        <button onclick="searchVideos()" class="w-full py-2.5 cinema-btn rounded-lg">
+          Search
+        </button>
+      </div>
+      <div id="searchResults" class="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+        <div class="text-center py-16 text-gray-600">
+          <div class="text-6xl mb-4 opacity-20">🎬</div>
+          <p class="text-sm font-light tracking-wide">Search for content</p>
+        </div>
+      </div>
     </div>
-    <div class="mb-4">
-      <input id="videoUrl" type="text" placeholder="Paste YouTube URL" class="p-2 rounded bg-gray-800 border border-gray-700 focus:border-green-500 focus:outline-none transition-all duration-300 hover:bg-gray-700">
-      <button onclick="changeVideo()" class="p-2 bg-gradient-to-r from-green-500 to-green-600 rounded hover:from-green-600 hover:to-green-700 transform hover:scale-105 transition-all duration-300">Change Video</button>
+
+    <!-- Center: Cinema Screen -->
+    <div class="flex-1 flex flex-col screen-frame">
+      <div class="px-8 py-6 border-b border-gray-900 spotlight">
+        <div class="flex items-center justify-between mb-6 fade-in">
+          <div>
+            <h1 class="text-2xl font-light text-white tracking-tight mb-1">AngSync Cinema</h1>
+            <p class="text-xs text-gray-500 font-light tracking-wide">SYNCHRONIZED VIEWING EXPERIENCE</p>
+          </div>
+          <div id="connectionStatus" class="status-badge">
+            Offline
+          </div>
+        </div>
+        
+        <div class="flex gap-4">
+          <input id="roomId" type="text" placeholder="Room ID" 
+            class="flex-1 px-5 py-4 rounded-lg cinema-input">
+          <input id="username" type="text" placeholder="Your Name" 
+            class="flex-1 px-5 py-4 rounded-lg cinema-input">
+          <button onclick="joinRoom()" class="px-8 py-4 cinema-btn rounded-lg">
+            Enter
+          </button>
+        </div>
+      </div>
+      
+      <div class="flex-1 flex items-center justify-center p-10">
+        <div class="w-full h-full relative max-w-7xl mx-auto">
+          <div id="player" class="w-full h-full bg-black"></div>
+          <div id="noVideo" class="absolute inset-0 flex items-center justify-center bg-black">
+            <div class="text-center">
+              <div class="w-32 h-32 mx-auto mb-8 rounded-full border-2 border-gray-900 flex items-center justify-center cinema-glow">
+                <div class="text-6xl opacity-20">▶</div>
+              </div>
+              <h3 class="text-xl font-light text-white mb-2 tracking-wide">No Content Selected</h3>
+              <p class="text-gray-600 text-sm font-light">Browse and select a video to begin</p>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
-    <div id="player" class="w-full h-96 rounded-lg shadow-2xl overflow-hidden transform hover:scale-[1.01] transition-all duration-300"></div>
+
+    <!-- Right Sidebar: Chat -->
+    <div id="rightPanel" class="w-80 spotlight border-l border-gray-900 flex flex-col resizable" style="min-width: 250px; max-width: 500px;">
+      <div class="resize-handle resize-handle-left"></div>
+      <div class="p-6 border-b border-gray-900">
+        <h2 class="text-xs font-bold text-gray-400 tracking-widest uppercase">Live Discussion</h2>
+      </div>
+      <div id="chatMessages" class="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+        <div class="text-center text-gray-600 py-16">
+          <div class="text-6xl mb-4 opacity-20">💬</div>
+          <p class="text-sm font-light tracking-wide">Join a room to chat</p>
+        </div>
+      </div>
+      <div class="p-4 border-t border-gray-900">
+        <div class="flex gap-2">
+          <input id="chatInput" type="text" placeholder="Message..." 
+            class="flex-1 px-4 py-3 rounded-lg cinema-input text-sm" 
+            onkeypress="if(event.key==='Enter') sendMessage()">
+          <button onclick="sendMessage()" class="px-4 py-3 cinema-btn-secondary rounded-lg text-base">
+            ➜
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 
+  <script src="https://www.youtube.com/iframe_api"></script>
   <script>
     let ws;
     let player;
     let roomId;
-    let lastSeekTime = 0;
+    let username;
+    let currentVideoUrl = null;
     let isSeeking = false;
     let isPaused = false;
     let isPlaying = false;
 
-    function joinRoom() {
-      roomId = document.getElementById('roomId').value.trim();
-      if (!roomId) return alert("Please enter a Room ID");
+    // YouTube Search
+    async function searchVideos() {
+      const query = document.getElementById('searchInput').value.trim();
+      if (!query) return;
 
-      ws = new WebSocket('wss://angsnyc-2.onrender.com');
+      const resultsDiv = document.getElementById('searchResults');
+      resultsDiv.innerHTML = '<div class="text-center py-4 text-blue-400">🔍 Searching...</div>';
+
+      try {
+        const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+        const videos = await response.json();
+        
+        if (videos.length === 0) {
+          resultsDiv.innerHTML = '<div class="text-center py-4 text-gray-400">No videos found</div>';
+          return;
+        }
+
+        resultsDiv.innerHTML = '';
+        videos.forEach(video => {
+          const div = document.createElement('div');
+          div.className = 'video-result p-4 rounded-xl cursor-pointer';
+          div.innerHTML = `
+            <div class="flex gap-4">
+              <img src="${video.thumbnail}" class="w-24 h-16 rounded-lg object-cover flex-shrink-0 border border-gray-800">
+              <div class="flex-1 min-w-0">
+                <h4 class="font-medium text-sm text-white mb-2 line-clamp-2 leading-snug">${video.title}</h4>
+                <p class="text-xs text-gray-500 mb-1 font-light">${video.author}</p>
+                <p class="text-xs text-gray-600 font-mono">${video.duration}</p>
+              </div>
+            </div>
+          `;
+          div.onclick = () => selectVideo(video.url, div);
+          resultsDiv.appendChild(div);
+        });
+      } catch (error) {
+        resultsDiv.innerHTML = '<div class="text-center py-8 text-gray-600 text-sm font-light">Search failed. Try again.</div>';
+      }
+    }
+
+    function selectVideo(url, element) {
+      document.querySelectorAll('.video-result').forEach(el => el.classList.remove('playing'));
+      element.classList.add('playing');
+      
+      currentVideoUrl = url;
+      console.log('🎬 Selected video:', url);
+      console.log('WebSocket state:', ws ? ws.readyState : 'null', 'Room ID:', roomId);
+      
+      loadVideo(url);
+      
+      // Send to room if connected
+      if (!roomId) {
+        console.warn('⚠️ No room joined yet. Video will be broadcast when you join a room.');
+        return;
+      }
+      
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        const message = { roomId, action: 'changeUrl', url };
+        console.log('📤 Sending changeUrl to room:', message);
+        ws.send(JSON.stringify(message));
+      } else {
+        console.warn('⚠️ WebSocket not ready - ws:', !!ws, 'state:', ws?.readyState, 'Room:', roomId);
+        console.log('Video will be broadcast when connection is established');
+      }
+    }
+
+    function joinRoom() {
+      const enteredRoomId = document.getElementById('roomId').value.trim();
+      const enteredUsername = document.getElementById('username').value.trim();
+      
+      if (!enteredRoomId) {
+        alert("Please enter a Room ID");
+        return;
+      }
+      
+      if (!enteredUsername) {
+        alert("Please enter your name");
+        return;
+      }
+
+      // If already connected to the same room, don't reconnect
+      if (ws && ws.readyState === WebSocket.OPEN && roomId === enteredRoomId) {
+        console.log('⚠️ Already connected to room', roomId);
+        return;
+      }
+
+      // Close existing connection if any
+      if (ws) {
+        ws.onclose = null; // Prevent onclose handler from triggering
+        ws.close();
+      }
+
+      roomId = enteredRoomId;
+      username = enteredUsername;
+      
+      // Update status
+      const statusDiv = document.getElementById('connectionStatus');
+      statusDiv.textContent = 'Connecting';
+      statusDiv.className = 'status-badge status-connecting';
+
+      ws = new WebSocket('ws://localhost:8080');
 
       ws.onopen = () => {
         console.log('✅ WebSocket connected');
-        ws.send(JSON.stringify({ roomId, action: 'join' }));
+        statusDiv.textContent = `Room ${roomId}`;
+        statusDiv.className = 'status-badge status-connected';
+        ws.send(JSON.stringify({ roomId, username, action: 'join' }));
+        
+        // Clear chat messages
+        document.getElementById('chatMessages').innerHTML = '';
+        
+        // If a video was already selected before joining, broadcast it to the room
+        if (currentVideoUrl) {
+          console.log('📤 Broadcasting previously selected video:', currentVideoUrl);
+          setTimeout(() => {
+            ws.send(JSON.stringify({ roomId, action: 'changeUrl', url: currentVideoUrl }));
+          }, 100);
+        }
       };
 
       ws.onmessage = (event) => {
         const data = JSON.parse(event.data);
-        console.log('📩 Received:', data);
+        console.log('📩 Received:', data.type, data.time);
 
         switch (data.type) {
+          case 'userCount':
+            const statusDiv = document.getElementById('connectionStatus');
+            statusDiv.textContent = `${data.count} Online • Room ${roomId}`;
+            statusDiv.className = 'status-badge status-connected';
+            break;
           case 'sync':
           case 'changeUrl':
-            loadVideo(data.url);
-            if (data.time > 0) {
-              setTimeout(() => {
-                isSeeking = true;
-                player.seekTo(data.time, true);
-                setTimeout(() => isSeeking = false, 300);
-              }, 300);
+            console.log('📺 Received sync/changeUrl - URL:', data.url, 'Time:', data.time);
+            if (data.url) {
+              currentVideoUrl = data.url;
+              console.log('📺 Loading video:', data.url);
+              loadVideo(data.url);
+              if (data.time > 0) {
+                setTimeout(() => {
+                  if (player) player.seekTo(data.time, true);
+                }, 1000);
+              }
+            } else {
+              console.log('ℹ️ No video in room yet');
             }
             break;
           case 'play':
-            if (!isPlaying) {
+            if (player && !isPlaying) {
+              isSeeking = true;
               isPlaying = true;
               isPaused = false;
+              player.seekTo(data.time, true);
               player.playVideo();
+              setTimeout(() => isSeeking = false, 500);
+              console.log('▶️ Playing');
             }
             break;
           case 'pause':
-            if (!isPaused) {
+            if (player && !isPaused) {
+              isSeeking = true;
               isPaused = true;
               isPlaying = false;
+              player.seekTo(data.time, true);
               player.pauseVideo();
+              setTimeout(() => isSeeking = false, 500);
+              console.log('⏸ Paused');
             }
             break;
           case 'seek':
-            if (!isSeeking && Math.abs(player.getCurrentTime() - data.time) > 0.5) {
-              isSeeking = true;
-              player.seekTo(data.time, true);
-              setTimeout(() => isSeeking = false, 200);
+            if (player && !isSeeking) {
+              const currentTime = player.getCurrentTime();
+              if (Math.abs(currentTime - data.time) > 2) {
+                isSeeking = true;
+                player.seekTo(data.time, true);
+                setTimeout(() => isSeeking = false, 500);
+                console.log('⏩ Seeked to', data.time);
+              }
             }
+            break;
+          case 'chat':
+            displayChatMessage(data.username, data.message, data.username === username);
             break;
         }
       };
 
-      ws.onerror = (error) => console.error('❌ WebSocket error:', error);
-      ws.onclose = () => console.log('⚠️ WebSocket disconnected');
-    }
-
-    function changeVideo() {
-      const url = document.getElementById('videoUrl').value.trim();
-      if (!url || (!url.includes("youtube.com/watch?v=") && !url.includes("youtu.be/"))) {
-        return alert("Invalid YouTube URL. Please use a valid YouTube link.");
-      }
-      if (!ws || ws.readyState !== WebSocket.OPEN) {
-        return alert("Please join a room first!");
-      }
-      ws.send(JSON.stringify({ roomId, action: 'changeUrl', url }));
+      ws.onerror = (error) => {
+        console.error('❌ WebSocket error:', error);
+        const statusDiv = document.getElementById('connectionStatus');
+        statusDiv.textContent = 'Error';
+        statusDiv.className = 'status-badge status-error';
+      };
+      
+      ws.onclose = () => {
+        console.log('⚠️ WebSocket disconnected');
+        const statusDiv = document.getElementById('connectionStatus');
+        statusDiv.textContent = 'Offline';
+        statusDiv.className = 'status-badge';
+      };
     }
 
     function loadVideo(url) {
       const videoId = extractVideoId(url);
-      if (!videoId) return alert("Invalid YouTube URL");
+      if (!videoId) return;
 
+      document.getElementById('noVideo').style.display = 'none';
+      
       if (player) {
-        player.loadVideoById({
-          'videoId': videoId,
-          'suggestedQuality': 'default'
-        });
-      } else {
-        player = new YT.Player('player', {
-          height: '100%',
-          width: '100%',
-          videoId: videoId,
-          playerVars: {
-            'autoplay': 1,
-            'controls': 1,
-            'rel': 0,
-            'modestbranding': 1,
-            'fs': 1,
-            'enablejsapi': 1,
-            'origin': window.location.origin
-          },
-          events: {
-            'onReady': onPlayerReady,
-            'onStateChange': onPlayerStateChange,
-            'onError': onPlayerError
-          }
-        });
+        player.loadVideoById(videoId);
       }
     }
 
     function extractVideoId(url) {
-      let videoId = null;
-      
-      // Handle youtube.com/watch?v=VIDEO_ID
-      let match = url.match(/[?&]v=([^&]+)/);
-      if (match) {
-        videoId = match[1];
-      } else {
-        // Handle youtu.be/VIDEO_ID
-        match = url.match(/youtu\.be\/([^?&]+)/);
-        if (match) {
-          videoId = match[1];
+      const match = url.match(/(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
+      return match ? match[1] : null;
+    }
+
+    function onYouTubeIframeAPIReady() {
+      player = new YT.Player('player', {
+        height: '100%',
+        width: '100%',
+        playerVars: { 'autoplay': 0, 'controls': 1, 'rel': 0, 'modestbranding': 1 },
+        events: {
+          'onReady': () => console.log('✅ Player ready'),
+          'onStateChange': onPlayerStateChange
         }
-      }
-      
-      return videoId;
-    }
-
-    function onPlayerReady(event) {
-      console.log('Player ready');
-      event.target.playVideo();
-    }
-
-    function onPlayerError(event) {
-      const errorMessages = {
-        2: 'Invalid video ID. Please check the URL.',
-        5: 'HTML5 player error. Try a different video.',
-        100: 'Video not found or has been removed.',
-        101: 'Video owner does not allow embedding. Try a different video.',
-        150: 'Video owner does not allow embedding. Try a different video.'
-      };
-      
-      const message = errorMessages[event.data] || 'An error occurred while loading the video.';
-      alert(message);
-      console.error('YouTube Player Error:', event.data, message);
+      });
     }
 
     function onPlayerStateChange(event) {
-      if (!ws || ws.readyState !== WebSocket.OPEN) return;
+      if (!ws || ws.readyState !== WebSocket.OPEN || isSeeking) return;
 
       const currentTime = player.getCurrentTime();
 
-      if (event.data === YT.PlayerState.PLAYING && !isSeeking) {
-        console.log("▶️ Video Played");
+      if (event.data === YT.PlayerState.PLAYING) {
         isPlaying = true;
         isPaused = false;
-        ws.send(JSON.stringify({ roomId, action: 'play', time: currentTime }));
+        if (roomId) ws.send(JSON.stringify({ roomId, action: 'play', time: currentTime }));
       } else if (event.data === YT.PlayerState.PAUSED) {
-        console.log("⏸ Video Paused");
         isPlaying = false;
         isPaused = true;
-        ws.send(JSON.stringify({ roomId, action: 'pause', time: currentTime }));
+        if (roomId) ws.send(JSON.stringify({ roomId, action: 'pause', time: currentTime }));
       }
     }
 
+    let lastSyncTime = 0;
     setInterval(() => {
-      if (player && ws && ws.readyState === WebSocket.OPEN && player.getPlayerState() === YT.PlayerState.PLAYING) {
-        const currentTime = player.getCurrentTime();
-        if (!isSeeking && Math.abs(currentTime - lastSeekTime) > 0.5) {
-          lastSeekTime = currentTime;
-          ws.send(JSON.stringify({ roomId, action: 'seek', time: currentTime }));
-        }
+      if (player && ws && ws.readyState === WebSocket.OPEN && roomId && !isSeeking) {
+        try {
+          if (player.getPlayerState() === YT.PlayerState.PLAYING) {
+            const currentTime = player.getCurrentTime();
+            if (Math.abs(currentTime - lastSyncTime) > 0.5) {
+              lastSyncTime = currentTime;
+              ws.send(JSON.stringify({ roomId, action: 'seek', time: currentTime }));
+            }
+          }
+        } catch (e) {}
       }
     }, 1000);
+
+    document.addEventListener('keypress', (e) => {
+      if (e.target.id === 'searchInput' && e.key === 'Enter') searchVideos();
+      if (e.target.id === 'roomId' && e.key === 'Enter') {
+        document.getElementById('username').focus();
+      }
+      if (e.target.id === 'username' && e.key === 'Enter') joinRoom();
+    });
+
+    function sendMessage() {
+      const input = document.getElementById('chatInput');
+      const message = input.value.trim();
+      
+      if (!message) return;
+      
+      if (!ws || ws.readyState !== WebSocket.OPEN || !roomId) {
+        alert('Please join a room first!');
+        return;
+      }
+      
+      ws.send(JSON.stringify({ 
+        roomId, 
+        action: 'chat', 
+        username, 
+        message 
+      }));
+      
+      input.value = '';
+    }
+
+    function displayChatMessage(sender, message, isMe) {
+      const chatDiv = document.getElementById('chatMessages');
+      const msgDiv = document.createElement('div');
+      msgDiv.className = 'chat-message';
+      
+      const bubbleClass = isMe ? 'my-message' : 'other-message';
+      msgDiv.innerHTML = `
+        <div class="${bubbleClass} rounded-2xl px-5 py-3 max-w-xs ${isMe ? 'ml-auto' : 'mr-auto'}">
+          <div class="text-xs font-semibold mb-2 ${isMe ? 'text-gray-300' : 'text-gray-500'} tracking-wide uppercase">${sender}</div>
+          <div class="text-sm text-white leading-relaxed font-light">${escapeHtml(message)}</div>
+        </div>
+      `;
+      
+      chatDiv.appendChild(msgDiv);
+      chatDiv.scrollTop = chatDiv.scrollHeight;
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // Resizable panels
+    function initResizablePanels() {
+      const leftPanel = document.getElementById('leftPanel');
+      const rightPanel = document.getElementById('rightPanel');
+      
+      const leftHandle = leftPanel.querySelector('.resize-handle-right');
+      const rightHandle = rightPanel.querySelector('.resize-handle-left');
+      
+      let isResizing = false;
+      let currentPanel = null;
+      
+      function startResize(panel, e) {
+        isResizing = true;
+        currentPanel = panel;
+        document.body.style.cursor = 'ew-resize';
+        document.body.style.userSelect = 'none';
+        e.preventDefault();
+      }
+      
+      function resize(e) {
+        if (!isResizing || !currentPanel) return;
+        
+        const rect = currentPanel.getBoundingClientRect();
+        let newWidth;
+        
+        if (currentPanel === leftPanel) {
+          newWidth = e.clientX - rect.left;
+        } else {
+          newWidth = rect.right - e.clientX;
+        }
+        
+        const minWidth = parseInt(currentPanel.style.minWidth) || 250;
+        const maxWidth = parseInt(currentPanel.style.maxWidth) || 500;
+        
+        newWidth = Math.max(minWidth, Math.min(maxWidth, newWidth));
+        currentPanel.style.width = newWidth + 'px';
+      }
+      
+      function stopResize() {
+        isResizing = false;
+        currentPanel = null;
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+      }
+      
+      leftHandle.addEventListener('mousedown', (e) => startResize(leftPanel, e));
+      rightHandle.addEventListener('mousedown', (e) => startResize(rightPanel, e));
+      
+      document.addEventListener('mousemove', resize);
+      document.addEventListener('mouseup', stopResize);
+    }
+    
+    // Initialize resizable panels on load
+    initResizablePanels();
   </script>
-  <script src="https://www.youtube.com/iframe_api"></script>
-   
-  <footer class="fixed bottom-0 w-full bg-gray-900 bg-opacity-80 text-center py-4">
-    <p class="text-gray-400">&copy; 2025 AngSync Room. All rights reserved by Jivan.</p>
-  </footer>
- 
 </body>
 </html>
