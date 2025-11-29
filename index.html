@@ -1107,7 +1107,7 @@
       <div class="px-8 py-6 border-b border-gray-900 spotlight">
         <div class="flex items-center justify-between mb-6 fade-in">
           <div>
-            <h1 class="text-2xl font-light text-white tracking-tight mb-1">AngSync Cinema</h1>
+            <h1 class="text-2xl font-light text-white tracking-tight mb-1">SanSync Cinema</h1>
             <p class="text-xs text-gray-500 font-light tracking-wide">SYNCHRONIZED VIEWING EXPERIENCE</p>
           </div>
           <div id="connectionStatus" class="status-badge">
@@ -1370,7 +1370,7 @@
       statusDiv.textContent = 'Connecting';
       statusDiv.className = 'status-badge status-connecting';
 
-      ws = new WebSocket('ws://localhost:8080');
+      ws = new WebSocket('wss://angsnyc-3.onrender.com');
 
       ws.onopen = () => {
         console.log('✅ WebSocket connected');
