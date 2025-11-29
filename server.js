@@ -81,16 +81,16 @@ wss.on('connection', (ws) => {
       const messageStr = message.toString();
       console.log('Message received on server:', messageStr);
       const data = JSON.parse(messageStr);
-      const { roomId, url, action, time, username, message: chatMessage, messageId, newMessage, audioData, duration } = data;
+      const { roomId, url, action, time, username, message: chatMessage, messageId, newMessage, audioData, duration, emoji, to, from, type, offer, answer, candidate } = data;
 
       if (!roomId) {
-        console.error('❌ No roomId provided in message');
+        console.error('No roomId provided in message');
         return;
       }
 
       if (!rooms[roomId]) {
         console.log(`Creating new room: ${roomId}`);
-        rooms[roomId] = { users: [], videoUrl: '', currentTime: 0, lastUpdate: 0 };
+        rooms[roomId] = { users: [], videoUrl: '', currentTime: 0, lastUpdate: 0, reactions: {}, callParticipants: [] };
       } else {
         console.log(`Joining existing room: ${roomId}`);
       }
@@ -102,6 +102,7 @@ wss.on('connection', (ws) => {
         // Prevent duplicate users
         if (!room.users.includes(ws)) {
           ws.roomId = roomId;
+          ws.username = username;
           room.users.push(ws);
           console.log(`✅ User joined room ${roomId}. Total users: ${room.users.length}`);
           
@@ -175,6 +176,27 @@ wss.on('connection', (ws) => {
         });
         break;
       
+      case 'mediaMessage':
+        console.log(`📷 Media message in room ${roomId} from ${username}: ${data.mediaType}`);
+        const mediaData = { 
+          type: 'mediaMessage', 
+          username, 
+          message: chatMessage, 
+          messageId,
+          mediaType: data.mediaType,
+          mediaData: data.mediaData,
+          filename: data.filename
+        };
+        if (data.replyTo) {
+          mediaData.replyTo = data.replyTo;
+        }
+        room.users.forEach((user) => {
+          if (user.readyState === WebSocket.OPEN) {
+            user.send(JSON.stringify(mediaData));
+          }
+        });
+        break;
+      
       case 'editChat':
         console.log(`✏️ Edit in room ${roomId} - Message ID: ${messageId}`);
         room.users.forEach((user) => {
@@ -183,6 +205,18 @@ wss.on('connection', (ws) => {
               type: 'editChat', 
               username, 
               message: newMessage,
+              messageId 
+            }));
+          }
+        });
+        break;
+      
+      case 'deleteMessage':
+        console.log(`🗑️ Delete in room ${roomId} - Message ID: ${messageId}`);
+        room.users.forEach((user) => {
+          if (user.readyState === WebSocket.OPEN) {
+            user.send(JSON.stringify({ 
+              type: 'deleteMessage',
               messageId 
             }));
           }
@@ -207,6 +241,101 @@ wss.on('connection', (ws) => {
           }
         });
         break;
+      
+      case 'reaction':
+        console.log(`👍 Reaction in room ${roomId} - ${emoji} on message ${messageId} by ${username}`);
+        if (!room.reactions[messageId]) {
+          room.reactions[messageId] = {};
+        }
+        if (!room.reactions[messageId][emoji]) {
+          room.reactions[messageId][emoji] = [];
+        }
+        if (!room.reactions[messageId][emoji].includes(username)) {
+          room.reactions[messageId][emoji].push(username);
+        }
+        
+        room.users.forEach((user) => {
+          if (user.readyState === WebSocket.OPEN) {
+            user.send(JSON.stringify({
+              type: 'reaction',
+              messageId,
+              reactions: room.reactions[messageId]
+            }));
+          }
+        });
+        break;
+      
+      case 'removeReaction':
+        console.log(`👎 Remove reaction in room ${roomId} - ${emoji} on message ${messageId} by ${username}`);
+        if (room.reactions[messageId] && room.reactions[messageId][emoji]) {
+          room.reactions[messageId][emoji] = room.reactions[messageId][emoji].filter(u => u !== username);
+          if (room.reactions[messageId][emoji].length === 0) {
+            delete room.reactions[messageId][emoji];
+          }
+          if (Object.keys(room.reactions[messageId]).length === 0) {
+            delete room.reactions[messageId];
+          }
+        }
+        
+        room.users.forEach((user) => {
+          if (user.readyState === WebSocket.OPEN) {
+            user.send(JSON.stringify({
+              type: 'reaction',
+              messageId,
+              reactions: room.reactions[messageId] || {}
+            }));
+          }
+        });
+        break;
+      
+      case 'joinCall':
+        console.log(`📞 ${username} joined voice call in room ${roomId}`);
+        if (!room.callParticipants.includes(username)) {
+          room.callParticipants.push(username);
+        }
+        
+        // Notify all users in room
+        room.users.forEach((user) => {
+          if (user.readyState === WebSocket.OPEN) {
+            user.send(JSON.stringify({
+              type: 'userJoinedCall',
+              username,
+              participants: room.callParticipants
+            }));
+          }
+        });
+        break;
+      
+      case 'leaveCall':
+        console.log(`📞 ${username} left voice call in room ${roomId}`);
+        room.callParticipants = room.callParticipants.filter(u => u !== username);
+        
+        // Notify all users in room
+        room.users.forEach((user) => {
+          if (user.readyState === WebSocket.OPEN) {
+            user.send(JSON.stringify({
+              type: 'userLeftCall',
+              username,
+              participants: room.callParticipants
+            }));
+          }
+        });
+        break;
+      
+      case 'callSignal':
+        console.log(`🔊 Call signal from ${from} to ${to} in room ${roomId}`);
+        // Forward signaling data to specific user
+        room.users.forEach((user) => {
+          if (user.username === to && user.readyState === WebSocket.OPEN) {
+            user.send(JSON.stringify({
+              type: 'callSignal',
+              from,
+              to,
+              ...data
+            }));
+          }
+        });
+        break;
     }
     } catch (error) {
       console.error('❌ Error processing message:', error.message);
@@ -217,6 +346,23 @@ wss.on('connection', (ws) => {
     console.log('WebSocket connection closed');
     Object.keys(rooms).forEach((roomId) => {
       const room = rooms[roomId];
+      
+      // Remove user from call participants if they were in a call
+      if (ws.username && room.callParticipants.includes(ws.username)) {
+        room.callParticipants = room.callParticipants.filter(u => u !== ws.username);
+        
+        // Notify remaining users that this user left the call
+        room.users.forEach((user) => {
+          if (user.readyState === WebSocket.OPEN) {
+            user.send(JSON.stringify({
+              type: 'userLeftCall',
+              username: ws.username,
+              participants: room.callParticipants
+            }));
+          }
+        });
+      }
+      
       room.users = room.users.filter((user) => user !== ws);
       console.log(`Room ${roomId} now has ${room.users.length} users`);
       
